@@ -5,7 +5,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Hardcoded user details
-USER_ID = "Nitin_Chauhan_22BAI71270"
+USER_ID = "Nitin_Chauhan_17052003"
 EMAIL = "22BAI71270@cuchd.in"
 ROLL_NUMBER = "22BAI71270"
 
