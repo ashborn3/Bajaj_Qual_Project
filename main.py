@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 app = Flask(__name__)
-# Enable CORS for all routes
 CORS(app)
 
 # Hardcoded user details
@@ -48,5 +47,9 @@ def process_data():
 def get_operation_code():
     return jsonify({"operation_code": 1}), 200
 
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.route('/')
+def home():
+    return jsonify({"message": "Flask API is running!"})
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=5000)
