@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ABCD123</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            max-width: 800px;
+            margin: 20px auto;
+        }
+        textarea {
+            width: 100%;
+            height: 80px;
+            margin-bottom: 10px;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #0066cc;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0052a3;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .error {
+            color: #dc3545;
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #dc3545;
+            border-radius: 4px;
+            background-color: #fff8f8;
+            display: none;
+        }
+        .selected-filters {
+            margin-bottom: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .filter-tag {
+            background-color: #e9ecef;
+            padding: 4px 12px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .remove-filter {
+            color: #666;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .remove-filter:hover {
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <h3>API Input</h3>
+    <textarea id="jsonInput" placeholder='{"data":["M","1","334","4","B"]}'></textarea>
+    <div id="errorMessage" class="error"></div>
+    <button onclick="submitData()">Submit</button>
+    
+    <h3>Multi Filter</h3>
+    <div id="selectedFilters" class="selected-filters"></div>
+    <select id="filterSelect" onchange="addFilter()">
+        <option value="">Select a filter...</option>
+        <option value="alphabets">Alphabets</option>
+        <option value="numbers">Numbers</option>
+        <option value="highest_alphabet">Highest Alphabet</option>
+    </select>
+    
+    <div id="responseContainer" class="response"></div>
+
+    <script>
+        let selectedFilters = new Set();
+        let lastResponse = null;
+
+        function validateJSON(jsonString) {
+            try {
+                const parsed = JSON.parse(jsonString);
+                if (!parsed.data || !Array.isArray(parsed.data)) {
+                    throw new Error('JSON must contain a "data" array');
+                }
+                if (parsed.data.length === 0) {
+                    throw new Error('Data array cannot be empty');
+                }
+                if (!parsed.data.every(item => typeof item === 'string')) {
+                    throw new Error('All items in data array must be strings');
+                }
+                return { valid: true, data: parsed };
+            } catch (error) {
+                return { valid: false, error: error.message };
+            }
+        }
+
+        function addFilter() {
+            const select = document.getElementById('filterSelect');
+            const value = select.value;
+            if (!value) return;
+
+            selectedFilters.add(value);
+            updateSelectedFiltersDisplay();
+            updateResponse();
+            select.value = ""; // Reset select
+        }
+
+        function removeFilter(filter) {
+            selectedFilters.delete(filter);
+            updateSelectedFiltersDisplay();
+            updateResponse();
+        }
+
+        function updateSelectedFiltersDisplay() {
+            const container = document.getElementById('selectedFilters');
+            container.innerHTML = Array.from(selectedFilters).map(filter => `
+                <div class="filter-tag">
+                    ${formatFilterName(filter)}
+                    <span class="remove-filter" onclick="removeFilter('${filter}')">&times;</span>
+                </div>
+            `).join('');
+        }
+
+        function formatFilterName(filter) {
+            return filter.split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+        }
+
+        async function submitData() {
+            const jsonInput = document.getElementById("jsonInput").value;
+            const errorElement = document.getElementById("errorMessage");
+            
+            const validation = validateJSON(jsonInput);
+            if (!validation.valid) {
+                errorElement.style.display = "block";
+                errorElement.textContent = `JSON Error: ${validation.error}`;
+                return;
+            }
+
+            try {
+                errorElement.style.display = "none";
+                const response = await fetch("http://127.0.0.1:5000/bfhl", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: jsonInput
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                lastResponse = await response.json();
+                updateResponse();
+            } catch (error) {
+                errorElement.style.display = "block";
+                errorElement.textContent = `API Error: ${error.message}`;
+            }
+        }
+
+        function updateResponse() {
+            if (!lastResponse) return;
+            
+            let output = "<h3>Filtered Response</h3>";
+            
+            if (selectedFilters.size === 0) {
+                output += "<p>Please select at least one filter option</p>";
+            } else {
+                if (selectedFilters.has("alphabets")) {
+                    output += `<p><strong>Alphabets:</strong> ${lastResponse.alphabets.join(", ")}</p>`;
+                }
+                if (selectedFilters.has("numbers")) {
+                    output += `<p><strong>Numbers:</strong> ${lastResponse.numbers.join(", ")}</p>`;
+                }
+                if (selectedFilters.has("highest_alphabet")) {
+                    output += `<p><strong>Highest Alphabet:</strong> ${lastResponse.highest_alphabet[0]}</p>`;
+                }
+            }
+            
+            document.getElementById("responseContainer").innerHTML = output;
+        }
+    </script>
+</body>
+</html>
